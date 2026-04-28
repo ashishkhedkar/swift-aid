@@ -8,6 +8,11 @@
 import os
 import sys
 import json
+import streamlit as st
+
+st.title("SwiftAid ")
+st.write("AI-Powered Ambulance Routing System")
+st.write("Demo running successfully!")
 
 # Make sure backend/ packages resolve correctly
 sys.path.insert(0, os.path.dirname(__file__))
