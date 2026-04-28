@@ -1,0 +1,32 @@
+{
+  "name": "Pune Central Grid",
+  "city": "Pune, Maharashtra, India",
+  "description": "SwiftAid simulation grid mapped to central Pune urban topology",
+  "grid_size": 6,
+  "cell_size_meters": 150,
+  "centre_lat": 18.5204,
+  "centre_lng": 73.8567,
+  "intersections": 49,
+  "roads": 84,
+  "avg_signal_cycle_sec": 90,
+  "peak_hours": [7, 8, 9, 17, 18, 19],
+  "hospitals": [
+    { "id": "H1", "name": "Ruby Hall Clinic",          "lat": 18.5314, "lng": 73.8808, "beds": 450  },
+    { "id": "H2", "name": "KEM Hospital",               "lat": 18.5293, "lng": 73.8719, "beds": 800  },
+    { "id": "H3", "name": "Jehangir Hospital",          "lat": 18.5204, "lng": 73.8810, "beds": 350  },
+    { "id": "H4", "name": "Sassoon General Hospital",   "lat": 18.5182, "lng": 73.8715, "beds": 1400 },
+    { "id": "H5", "name": "Deenanath Mangeshkar",       "lat": 18.5079, "lng": 73.8217, "beds": 600  }
+  ],
+  "high_congestion_zones": [
+    { "label": "FC Road",      "bounds": [[18.528, 73.839],[18.532, 73.846]] },
+    { "label": "JM Road",      "bounds": [[18.521, 73.840],[18.526, 73.848]] },
+    { "label": "Swargate",     "bounds": [[18.500, 73.858],[18.506, 73.866]] },
+    { "label": "Shivajinagar", "bounds": [[18.528, 73.843],[18.534, 73.852]] }
+  ],
+  "benchmark": {
+    "avg_delay_no_ai_sec":   42,
+    "avg_delay_with_ai_sec": 21,
+    "improvement_pct":       50,
+    "source": "Simulated — NITI Aayog emergency response benchmarks"
+  }
+}

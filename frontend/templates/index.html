@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SwiftAid — Emergency Traffic Response System</title>
+
+  <!-- Leaflet GIS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="../static/css/main.css"/>
+</head>
+<body>
+
+  <!-- ── TOPBAR ─────────────────────────────────────── -->
+  <header id="topbar">
+    <div class="tb-left">
+      <div class="logo">
+        <svg class="logo-icon" viewBox="0 0 18 18" fill="none">
+          <rect x="7" y="1" width="4" height="16" rx="1" fill="#E24B4A"/>
+          <rect x="1" y="7" width="16" height="4" rx="1" fill="#E24B4A"/>
+        </svg>
+        <span class="logo-name">SwiftAid</span>
+        <span class="logo-badge">RESPONSE SYSTEM</span>
+      </div>
+      <div class="sys-status" id="sys-status">
+        <span class="sys-dot" id="sys-dot"></span>
+        <span id="sys-text">STANDBY</span>
+      </div>
+    </div>
+    <div class="tb-right">
+      <div class="tb-stat"><span class="tb-lbl">CITY</span><span class="tb-val" id="hdr-city">Pune, MH</span></div>
+      <div class="tb-stat"><span class="tb-lbl">ACTIVE UNITS</span><span class="tb-val" id="hdr-units">0</span></div>
+      <div class="tb-stat"><span class="tb-lbl">SIGNALS MANAGED</span><span class="tb-val" id="hdr-sigs">0</span></div>
+      <div class="tb-stat"><span class="tb-lbl">LOCAL TIME</span><span class="tb-val" id="hdr-time">--:--:--</span></div>
+      <div class="tb-divider"></div>
+      <div class="tb-stat"><span class="tb-lbl">MODE</span><span class="tb-val tb-mode" id="hdr-mode">SIMULATION</span></div>
+    </div>
+  </header>
+
+  <!-- ── LAYOUT ─────────────────────────────────────── -->
+  <div id="layout">
+
+    <!-- LEFT: CONTROLS -->
+    <aside id="left-panel">
+
+      <div class="ps ps-dispatch">
+        <div class="ps-title">DISPATCH</div>
+
+        <div class="field-group">
+          <label class="fl">PRIORITY</label>
+          <div class="pri-row" id="pri-row">
+            <button class="pb active" data-p="P1" onclick="setPriority(this)">
+              <span class="pb-code">P1</span><span class="pb-label">Critical</span>
+            </button>
+            <button class="pb" data-p="P2" onclick="setPriority(this)">
+              <span class="pb-code">P2</span><span class="pb-label">Urgent</span>
+            </button>
+            <button class="pb" data-p="P3" onclick="setPriority(this)">
+              <span class="pb-code">P3</span><span class="pb-label">Routine</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="fl">UNITS</label>
+          <div class="stepper">
+            <button class="step-btn" onclick="changeUnits(-1)">&#8722;</button>
+            <span id="unit-count">1</span>
+            <button class="step-btn" onclick="changeUnits(1)">&#43;</button>
+            <span class="step-unit">unit(s)</span>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label class="fl">ROUTING ALGORITHM</label>
+          <select class="sel" id="algo-select">
+            <option value="dijkstra">Dijkstra — Shortest Path</option>
+            <option value="astar">A* — Heuristic Fast</option>
+            <option value="congestion">Congestion-Aware A*</option>
+          </select>
+        </div>
+
+        <div class="field-group">
+          <label class="fl">MAP MODE</label>
+          <div class="map-mode-row">
+            <button class="mm-btn active" id="mm-gis" onclick="setMapMode('gis', this)">GIS / Live Map</button>
+            <button class="mm-btn" id="mm-grid" onclick="setMapMode('grid', this)">Grid Simulation</button>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-dispatch" onclick="dispatch()">DISPATCH</button>
+        <button class="btn-secondary" onclick="runDemo()">RUN AUTO DEMO</button>
+        <button class="btn-ghost" onclick="resetAll()">RESET</button>
+      </div>
+
+      <div class="ps">
+        <div class="ps-title">SCENARIO PRESETS</div>
+        <div class="sc-grid">
+          <button class="sc-btn" onclick="loadScenario('peak')">Peak Hour</button>
+          <button class="sc-btn" onclick="loadScenario('night')">Night Run</button>
+          <button class="sc-btn" onclick="loadScenario('multi')">Multi-Unit</button>
+          <button class="sc-btn" onclick="loadScenario('conflict')">Conflict Zone</button>
+        </div>
+      </div>
+
+      <div class="ps">
+        <div class="ps-title">AI MODULES</div>
+        <div class="tog-list">
+          <label class="tog-row">
+            <span class="tog-label">Signal Pre-emption</span>
+            <label class="sw"><input type="checkbox" id="tog-preempt" checked><span class="sw-track"></span></label>
+          </label>
+          <label class="tog-row">
+            <span class="tog-label">Dynamic Rerouting</span>
+            <label class="sw"><input type="checkbox" id="tog-reroute" checked><span class="sw-track"></span></label>
+          </label>
+          <label class="tog-row">
+            <span class="tog-label">Conflict Resolution</span>
+            <label class="sw"><input type="checkbox" id="tog-conflict" checked><span class="sw-track"></span></label>
+          </label>
+          <label class="tog-row">
+            <span class="tog-label">Time-of-Day Weighting</span>
+            <label class="sw"><input type="checkbox" id="tog-tod" checked><span class="sw-track"></span></label>
+          </label>
+        </div>
+      </div>
+
+      <div class="ps">
+        <div class="ps-title">GIS LAYER</div>
+        <div class="tog-list">
+          <label class="tog-row">
+            <span class="tog-label">Traffic Heatmap</span>
+            <label class="sw"><input type="checkbox" id="tog-heat" checked onchange="toggleLayer('heat',this)"><span class="sw-track"></span></label>
+          </label>
+          <label class="tog-row">
+            <span class="tog-label">Hospital Markers</span>
+            <label class="sw"><input type="checkbox" id="tog-hosp" checked onchange="toggleLayer('hosp',this)"><span class="sw-track"></span></label>
+          </label>
+          <label class="tog-row">
+            <span class="tog-label">Route Overlay</span>
+            <label class="sw"><input type="checkbox" id="tog-route" checked onchange="toggleLayer('route',this)"><span class="sw-track"></span></label>
+          </label>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- CENTER: MAP -->
+    <div id="center">
+      <!-- GIS Map (Leaflet) -->
+      <div id="gis-map"></div>
+      <!-- Grid Canvas (fallback / sim mode) -->
+      <canvas id="grid-canvas"></canvas>
+
+      <!-- Overlays -->
+      <div id="top-badge" class="badge-idle">SYSTEM READY — SELECT MODE AND DISPATCH</div>
+      <div id="speed-hud">
+        <div class="shud-val" id="hud-spd">0</div>
+        <div class="shud-unit">km/h</div>
+      </div>
+      <div id="coords-hud" class="coords-hud">
+        <span id="coords-lat">18.5204</span>° N &nbsp;
+        <span id="coords-lng">73.8567</span>° E
+      </div>
+      <div id="map-legend">
+        <div class="lg-row"><span class="lg-dot" style="background:#E24B4A"></span><span>Signal — Red</span></div>
+        <div class="lg-row"><span class="lg-dot" style="background:#7adf3a"></span><span>Signal — Cleared</span></div>
+        <div class="lg-row"><span class="lg-dot" style="background:#EF9F27"></span><span>Signal — Recovery</span></div>
+        <div class="lg-row"><span class="lg-swatch" style="background:rgba(226,75,74,0.35)"></span><span>Congestion</span></div>
+        <div class="lg-row"><span class="lg-swatch" style="background:rgba(96,176,255,0.35)"></span><span>Active Route</span></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: METRICS & LOG -->
+    <aside id="right-panel">
+
+      <div class="ps">
+        <div class="ps-title">LIVE METRICS</div>
+        <div class="mcard-grid">
+          <div class="mcard">
+            <div class="mcard-lbl">Est. Response</div>
+            <div class="mcard-val" id="m-eta">--</div>
+            <div class="mcard-sub">seconds</div>
+          </div>
+          <div class="mcard">
+            <div class="mcard-lbl">Time Saved</div>
+            <div class="mcard-val c-green" id="m-saved">--</div>
+            <div class="mcard-sub">vs baseline</div>
+          </div>
+          <div class="mcard">
+            <div class="mcard-lbl">Signals Cleared</div>
+            <div class="mcard-val c-amber" id="m-sigs">0</div>
+            <div class="mcard-sub">this run</div>
+          </div>
+          <div class="mcard">
+            <div class="mcard-lbl">Route Nodes</div>
+            <div class="mcard-val c-blue" id="m-hops">--</div>
+            <div class="mcard-sub">path length</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ps">
+        <div class="ps-title">BEFORE / AFTER COMPARISON</div>
+        <div class="ba-grid">
+          <div class="ba-col">
+            <div class="ba-hdr">WITHOUT AI</div>
+            <div class="ba-val c-red" id="ba-without">--</div>
+            <div class="ba-sub">avg with signal delays</div>
+            <div class="ba-track"><div class="ba-fill ba-fill-red" id="bf-red" style="width:100%"></div></div>
+          </div>
+          <div class="ba-col ba-col-ai">
+            <div class="ba-hdr">WITH AI</div>
+            <div class="ba-val c-green" id="ba-with">--</div>
+            <div class="ba-sub">pre-emption active</div>
+            <div class="ba-track"><div class="ba-fill ba-fill-green" id="bf-green" style="width:55%"></div></div>
+          </div>
+        </div>
+        <div class="impact-row">
+          <span class="impact-pill">CLINICAL IMPACT</span>
+          <span class="impact-txt" id="impact-txt">Each minute saved raises cardiac survival by ~10%</span>
+        </div>
+      </div>
+
+      <div class="ps ps-log">
+        <div class="ps-title ps-title-row">
+          EVENT LOG
+          <button class="log-clr-btn" onclick="clearLog()">CLEAR</button>
+        </div>
+        <div id="event-log"></div>
+      </div>
+
+      <div class="ps">
+        <div class="ps-title">SESSION SUMMARY</div>
+        <div class="sum-table">
+          <div class="sum-row"><span>Missions completed</span><span class="sum-val" id="ss-missions">0</span></div>
+          <div class="sum-row"><span>Cumulative time saved</span><span class="sum-val c-green" id="ss-saved">0.0s</span></div>
+          <div class="sum-row"><span>Total signals cleared</span><span class="sum-val c-amber" id="ss-sigs">0</span></div>
+          <div class="sum-row"><span>Avg improvement/run</span><span class="sum-val c-blue" id="ss-avg">--</span></div>
+        </div>
+      </div>
+
+    </aside>
+  </div><!-- /#layout -->
+
+  <!-- Scripts — load order matters -->
+  <script src="../static/js/constants.js"></script>
+  <script src="../static/js/city_grid.js"></script>
+  <script src="../static/js/signals.js"></script>
+  <script src="../static/js/ambulance.js"></script>
+  <script src="../static/js/dijkstra.js"></script>
+  <script src="../static/js/astar.js"></script>
+  <script src="../static/js/router.js"></script>
+  <script src="../static/js/decision_engine.js"></script>
+  <script src="../static/js/gis_layer.js"></script>
+  <script src="../static/js/renderer.js"></script>
+  <script src="../static/js/app.js"></script>
+</body>
+</html>
